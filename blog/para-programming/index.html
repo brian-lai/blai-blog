@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PARA-Programming: A New Paradigm for AI-Assisted Development | Brian H.C. Lai</title>
-    <meta name="description" content="Introducing a structured methodology for working with AI coding assistants, combining the PARA method with pair programming principles.">
+    <title>Building a Second Brain with Agentic AI | Brian H.C. Lai</title>
+    <meta name="description" content="A framework for human-AI collaboration, cognitive scaling, and efficient data access using PARA-Programming methodology.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -30,35 +30,390 @@
 
         <article>
             <header class="article-header">
-                <h1>PARA-Programming: A New Paradigm for AI-Assisted Development</h1>
+                <h1>Building a Second Brain with Agentic AI</h1>
+                <p class="article-subtitle">A Framework for Human–AI Collaboration, Cognitive Scaling & Efficient Data Access</p>
                 <div class="article-meta">
                     <time datetime="2024-12-29">December 29, 2024</time>
                     <span class="post-tag">methodology</span>
-                    <span class="reading-time">10 min read</span>
+                    <span class="reading-time">12 min read</span>
                 </div>
             </header>
 
             <div class="article-content">
-                <!--
-                    DROP YOUR MARKDOWN CONTENT HERE
 
-                    You can paste your article content directly into this div.
-                    The CSS is already set up to style:
-                    - Headings (h2, h3, h4)
-                    - Paragraphs
-                    - Code blocks (inline and fenced)
-                    - Blockquotes
-                    - Lists (ordered and unordered)
-                    - Tables
-                    - Links
-                    - Images
+                <h2>Why This Matters</h2>
 
-                    To convert your markdown to HTML, you can use:
-                    - A markdown-to-HTML converter
-                    - Or just paste the content and I'll help convert it
-                -->
+                <p>Claude Code and similar Agentic tools are more than an AI coding assistant, they're a thinking partner.</p>
 
-                <p><em>Your article content will go here. Drop in your markdown file and I'll help you integrate it.</em></p>
+                <p>To use it effectively, we need systems that persist insight, decision‑making and progress across sessions.</p>
+
+                <p>Inspired by Tiago Forte's <em>Building a Second Brain</em>, this workflow unites AI and the human engineer into a shared cognitive system—a <em>joint Second Brain</em>.</p>
+
+                <p>This system ensures:</p>
+
+                <ul>
+                    <li>We never lose context between sessions.</li>
+                    <li>Our reasoning is <strong>visible, auditable and reusable</strong>.</li>
+                    <li>Claude's contributions compound over time.</li>
+                    <li>We optimize token usage and efficiency, especially when handling large data/tools via MCP.</li>
+                </ul>
+
+                <hr>
+
+                <h2>Core Philosophy: The Shared Second Brain</h2>
+
+                <blockquote>
+                    <p>"Your mind is for having ideas, not holding them." — Tiago Forte</p>
+                </blockquote>
+
+                <p>A structured <code>context/</code> directory externalizes thinking into files—not fleeting prompts—giving both human and Claude a persistent working memory that evolves with each project.</p>
+
+                <p><strong>The goal:</strong></p>
+
+                <p>Build a system that remembers what we know, tracks what we're doing, and records why we made decisions.</p>
+
+                <hr>
+
+                <h2>The PARA Framework</h2>
+
+                <h3>PARA Mapping</h3>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>PARA Concept</th>
+                            <th>Implementation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Projects</strong></td>
+                            <td><code>context/plans/</code> holds project‑specific plans and specs</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Areas</strong></td>
+                            <td><code>context/context.md</code> tracks ongoing work for each session</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Resources</strong></td>
+                            <td><code>context/data/</code> stores datasets, inputs, API payloads</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Archives</strong></td>
+                            <td><code>context/archives/</code> preserves completed sessions</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>(Optional) MCP Integration</h3>
+
+                <p>In addition to PARA, we add a directory for MCP tool access:</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>MCP Strategy</th>
+                            <th>Implementation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Tool Wrappers Directory</strong></td>
+                            <td><code>context/servers/</code> (or <code>context/mcp_servers/</code>) holds code wrappers for MCP servers</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Lazy Loading of Tool Definitions</strong></td>
+                            <td>Claude reads only the wrappers needed for current task (reduces token overhead)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Pre‑processing of Data</strong></td>
+                            <td>Large datasets are fetched via MCP code, filtered/transformed, then only the result sent to model (minimises context size)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Privacy & State</strong></td>
+                            <td>Sensitive data remains outside model context unless necessary, improving privacy and efficiency</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <hr>
+
+                <h2>The <code>context/</code> Directory Structure</h2>
+
+                <p>Each project should have a <code>context/</code> directory that Claude can <strong>read from and write to</strong>. This is our shared brain.</p>
+
+<pre><code>project-root/
+├── context/
+│   ├── context.md
+│   ├── data/
+│   ├── plans/
+│   ├── summaries/
+│   ├── archives/
+│   └── servers/             ← MCP tool wrappers directory
+└── Claude.md</code></pre>
+
+                <h3>Folder Purposes</h3>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Directory</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>context/data/</code></td>
+                            <td>Store supporting data, input files, API payloads</td>
+                        </tr>
+                        <tr>
+                            <td><code>context/plans/</code></td>
+                            <td>Project plans, specs and reasoning documents</td>
+                        </tr>
+                        <tr>
+                            <td><code>context/summaries/</code></td>
+                            <td>Completed work summaries and decisions</td>
+                        </tr>
+                        <tr>
+                            <td><code>context/archives/</code></td>
+                            <td>Archived context/history for audit trail</td>
+                        </tr>
+                        <tr>
+                            <td><code>context/servers/</code></td>
+                            <td>Code wrapper files for MCP servers (tool definitions, APIs)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <hr>
+
+                <h2>The Master File: <code>context/context.md</code></h2>
+
+                <p>This file serves as Claude's <strong>working memory</strong> for the current session.</p>
+
+                <p>It includes:</p>
+
+                <ol>
+                    <li>A human‑readable summary of what's being worked on.</li>
+                    <li>A JSON section tracking active context, tool wrappers loaded, datasets used, etc.</li>
+                </ol>
+
+                <p>Example:</p>
+
+<pre><code># Current Work Summary
+Working on splitting BFF and Data Provider logic with MCP tool integration.
+
+---
+```json
+{
+  "active_context": [
+    "context/plans/split-bff-data-provider.md",
+    "context/data/openapi_schema.json",
+    "context/servers/google-drive/getDocument.ts"
+  ],
+  "completed_summaries": [
+    "context/summaries/advisor-service-architecture.md"
+  ],
+  "last_updated": "2025‑11‑08T12:42:00Z"
+}
+```</code></pre>
+
+                <p>When a task completes, archive:</p>
+
+<pre><code>mv context/context.md context/archives/context‑$(date +%F‑%H%M).md</code></pre>
+
+                <hr>
+
+                <h2>The Cognitive Workflow Loop</h2>
+
+<pre><code>(Plan) → (Review) → (Execute) → (Summarize) → (Archive)
+              ↑                           ↓
+        Human Review                 Context Refresh</code></pre>
+
+                <h3>Pair‑Programming Philosophy</h3>
+
+                <p>At the core of this workflow is working with the AI as a pairing partner.</p>
+
+                <p>Roles may flip when logic is complex or sensitive. The key: maintain shared understanding through plans, tool wrappers and summaries.</p>
+
+                <h3>Step‑by‑step</h3>
+
+                <h4>1. Plan</h4>
+
+                <p>Claude drafts a plan in <code>context/plans/</code>, declaring: objective, background, approach, risks, review checklist, data/tool sources (including <code>servers/</code>).</p>
+
+                <p><em>See also the <strong>Plan Authoring Guide</strong> (Confluence) for the full plan template, data/source manifests, token budgets, and MCP usage gates.</em></p>
+
+                <h4>2. Review</h4>
+
+                <p>Pause and ask the human:</p>
+
+                <blockquote>
+                    <p>"Please review context/plans/&lt;task&gt;.md. Does it align with your intent—including the MCP tool wrappers in context/servers/?"</p>
+                </blockquote>
+
+                <h4>3. Execute</h4>
+
+                <p>Claude writes or uses existing wrapper code in <code>context/servers/</code> to call MCP tools, preprocess data externally, then uses the model only with filtered results. This dramatically reduces token consumption.</p>
+
+                <p>(E.g., load only necessary tools from <code>servers/</code>, filter large result sets before returning to model.)</p>
+
+                <h4>4. Summarize</h4>
+
+                <p>Claude writes a summary in <code>context/summaries/</code>:</p>
+
+                <ul>
+                    <li>What changed</li>
+                    <li>Why it changed</li>
+                    <li>Which MCP tools/data wrappers were used</li>
+                    <li>Key learnings + next steps</li>
+                </ul>
+
+                <h4>5. Archive</h4>
+
+                <p>Move <code>context/context.md</code> → <code>context/archives/</code>, then create a new, fresh <code>context/context.md</code> seeded with persistent context (if any). Keeps brain focused, lean and fresh.</p>
+
+                <h3>Progressive Summarization with MCP</h3>
+
+                <p>Each step creates reusable artifacts (plans, summaries, tool wrappers) that become part of the shared brain.</p>
+
+                <p>Because we load only what's needed, and preprocess in code, token usage is far lower.</p>
+
+                <h3>Session Hygiene & MCP Best Practices</h3>
+
+                <ol>
+                    <li>Archive old context files after each task.</li>
+                    <li>Keep <code>context/servers/</code> up to date with wrappers; load only what's needed.</li>
+                    <li>Summaries include which wrappers/tools were used (provenance).</li>
+                    <li>Use the "load‑on‑demand" principle for MCP: never dump full tool definitions unless required.</li>
+                    <li>Monitor token usage and strive for lean model context.</li>
+                </ol>
+
+                <hr>
+
+                <h2>Token & Cognitive Efficiency Strategies</h2>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Strategy</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Fewer, richer prompts</strong></td>
+                            <td>Use structured plans and tool wrappers to reduce guesswork and prompt loops</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Context linking, not repetition</strong></td>
+                            <td>Use <code>context/servers/</code>, <code>context/data/</code>, <code>context/plans/</code> rather than restating large data inline</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Active summarization</strong></td>
+                            <td>Fill <code>context/summaries/</code> to seed future sessions</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Cache critical state</strong></td>
+                            <td>Store token metadata, tool usages in <code>context/context.md</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Load‑on‑demand tools</strong></td>
+                            <td>Use wrappers in <code>servers/</code>, load only relevant definitions and skip full tool list</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Preprocess large results</strong></td>
+                            <td>Use MCP tool wrapper code to filter large datasets before the model sees them</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Human checkpoints</strong></td>
+                            <td>Review steps to avoid wasted tokens on misaligned work</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <hr>
+
+                <h2>Why This Approach Works</h2>
+
+                <h3>Backed by Cognitive and Empirical Evidence</h3>
+
+                <p>PARA‑Programming is effective because it mirrors how both <strong>humans and LLMs process information most efficiently</strong>— through <strong>focused working memory</strong> and <strong>externalized long‑term memory</strong>.</p>
+
+                <h3>1. Cognitive Parallel</h3>
+
+                <p>Humans use short‑term memory to process active tasks and rely on external systems (notes, documents, tools) for recall. PARA‑Programming formalizes the same behavior for Claude:</p>
+
+                <ul>
+                    <li>The <strong>prompt window</strong> is analogous to human working memory.</li>
+                    <li>The <strong>context directory</strong> acts as long‑term memory.</li>
+                    <li>The <code>context.md</code> <strong>file</strong> serves as the prefrontal cortex — deciding what to bring into focus.</li>
+                </ul>
+
+                <p>By keeping only the most relevant context active, Claude performs more accurate reasoning while minimizing noise and token costs.</p>
+
+                <h3>2. Supported by Anthropic Research</h3>
+
+                <p><a href="https://www.anthropic.com/engineering/code-execution-with-mcp">Anthropic's research on <strong>Model Context Protocol</strong> (MCP)</a> confirms this design principle:</p>
+
+                <ul>
+                    <li>LLMs perform best when <strong>context is minimal and purposeful</strong> rather than exhaustive.</li>
+                    <li><strong>Externalized computation</strong> (via tools or code execution) allows the model to focus on reasoning instead of data handling.</li>
+                    <li>In Anthropic's internal benchmarks, using persistent code and data abstractions reduced token usage by up to <strong>98.7%</strong> while improving accuracy and determinism.</li>
+                </ul>
+
+                <p>These findings validate the Second Brain model: persistent memory and selective recall lead to lower cost, higher precision, and scalable reasoning.</p>
+
+                <h3>3. Engineering Payoff</h3>
+
+                <ul>
+                    <li><strong>Efficiency</strong>: Less redundant prompting and smaller active context.</li>
+                    <li><strong>Reproducibility</strong>: Every reasoning step stored in human‑readable files.</li>
+                    <li><strong>Scalability</strong>: Multi‑agent and multi‑engineer work remains consistent across sessions.</li>
+                    <li><strong>Auditability</strong>: Clear trace of what Claude knew, when, and why.</li>
+                </ul>
+
+                <p>In short, PARA‑Programming applies the same evidence‑based design principles that Anthropic uses internally to make Claude efficient — turning context management into an engineering discipline.</p>
+
+                <hr>
+
+                <h2>The Outcome</h2>
+
+                <p>With this system:</p>
+
+                <ul>
+                    <li>Every engineering session produces durable knowledge.</li>
+                    <li>Every decision is documented and recoverable.</li>
+                    <li>Token usage and rework decrease.</li>
+                    <li>Claude becomes a <strong>deterministic, collaborative engineer</strong> with minimal wasted context.</li>
+                    <li>Access to large data, tools and systems is efficient and secure thanks to MCP wrappers.</li>
+                </ul>
+
+                <hr>
+
+                <h2>Summary</h2>
+
+                <ul>
+                    <li>Setup <code>context/servers/</code> for MCP tool wrappers.</li>
+                    <li>Use the plan → review → execute → summarize → archive loop.</li>
+                    <li>Leverage MCP strategy for loading only necessary tools and filtering data.</li>
+                    <li>Link everything to <code>context/data/</code>, <code>context/plans/</code>, <code>context/summaries/</code>.</li>
+                    <li>Archive completed context files to preserve audit trail.</li>
+                    <li>Continuously monitor token usage and accuracy.</li>
+                </ul>
+
+                <hr>
+
+                <h2>Closing Thought</h2>
+
+                <p>Worth mentioning again:</p>
+
+                <blockquote>
+                    <p>"Your mind is for having ideas, not holding them." — Tiago Forte</p>
+                </blockquote>
+
+                <p>PARA‑Programming applies this principle to Claude; we externalize memory into structure, freeing ourselves to focus purely on reasoning and creativity.</p>
+
             </div>
         </article>
     </main>
