@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PARA-Programming: Structured AI-Assisted Development</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.0/dist/reset.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.0/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.0/dist/theme/black.css">
+    <style>
+        .reveal {
+            font-family: 'Roboto', sans-serif;
+        }
+        .reveal h1, .reveal h2, .reveal h3 {
+            font-family: 'Roboto', sans-serif;
+        }
+        .reveal .slides {
+            height: 50%;
+            width: 50%;
+        }
+        .reveal .slides section {
+            box-sizing: border-box;
+        }
+        .reveal h1 {
+            font-size: 3vw;
+            font-weight: 700;
+            margin-bottom: 0.3em;
+        }
+        .reveal h2 {
+            font-size: 2.2vw;
+            font-weight: 500;
+            margin-bottom: 0.5em;
+        }
+        .reveal h3 {
+            font-size: 1.6vw;
+            color: #42affa;
+            font-weight: 400;
+        }
+        .reveal p, .reveal li {
+            font-size: 1.2vw;
+            line-height: 1.6;
+            font-weight: 300;
+        }
+        .reveal ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .reveal li {
+            margin: 0.8em 0;
+            padding-left: 1.5em;
+            position: relative;
+        }
+        .reveal li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #42affa;
+            font-weight: normal;
+        }
+        .reveal strong {
+            color: #42affa;
+            font-weight: 500;
+        }
+        .reveal em {
+            color: #42affa;
+            font-style: normal;
+            font-weight: 500;
+        }
+        .reveal .highlight {
+            color: #42affa;
+            font-weight: 500;
+        }
+        .reveal .big-number {
+            font-size: 5vw;
+            color: #42affa;
+            font-weight: 700;
+            display: block;
+            margin: 0.3em 0;
+        }
+        .reveal .workflow {
+            font-size: 1.8vw;
+            font-family: 'Roboto', monospace;
+            text-align: center;
+            margin: 1em 0;
+            padding: 1em;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.5em;
+            font-weight: 400;
+        }
+        .reveal .arrow {
+            color: #42affa;
+            font-size: 2vw;
+        }
+        .reveal code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.2em 0.5em;
+            border-radius: 0.3em;
+            color: #fff;
+            font-family: 'Roboto Mono', monospace;
+        }
+        .reveal pre code {
+            font-family: 'Roboto Mono', monospace;
+        }
+        .reveal .centered {
+            text-align: center;
+        }
+        .reveal .grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 2em;
+            margin: 1em 0;
+        }
+        .reveal .subtitle {
+            font-size: 1.4vw;
+            color: #888;
+            font-weight: 300;
+            margin-top: 0.5em;
+        }
+        .reveal code {
+            font-size: 1vw;
+        }
+        .reveal pre {
+            font-size: 0.9vw;
+        }
+
+        /* Text size variants */
+        .text-large {
+            font-size: 1.5vw;
+        }
+        .text-xlarge {
+            font-size: 1.8vw;
+        }
+        .text-medium {
+            font-size: 1.2vw;
+        }
+        .text-small {
+            font-size: 0.95vw;
+        }
+
+        /* Spacing utilities */
+        .mb-1 {
+            margin-bottom: 1em;
+        }
+        .mb-2 {
+            margin-bottom: 2em;
+        }
+        .mt-1 {
+            margin-top: 1em;
+        }
+        .mt-2 {
+            margin-top: 2em;
+        }
+        .ml-2 {
+            margin-left: 2em;
+        }
+        .my-1 {
+            margin-top: 1em;
+            margin-bottom: 1em;
+        }
+
+        /* Line height */
+        .lh-relaxed {
+            line-height: 1.8;
+        }
+        .lh-normal {
+            line-height: 1.6;
+        }
+
+        /* Additional text sizes */
+        .text-large-medium {
+            font-size: 1.3vw;
+        }
+
+        /* Text alignment */
+        .text-center {
+            text-align: center;
+        }
+        .text-left {
+            text-align: left;
+        }
+
+        /* Additional spacing - 1.5em */
+        .mt-1-5 {
+            margin-top: 1.5em;
+        }
+        .mb-1-5 {
+            margin-bottom: 1.5em;
+        }
+        .my-1-5 {
+            margin-top: 1.5em;
+            margin-bottom: 1.5em;
+        }
+
+        /* Additional spacing - 0.8em */
+        .mt-0-8 {
+            margin-top: 0.8em;
+        }
+
+        /* Text color variants */
+        .text-gray {
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+<div class="reveal">
+    <div class="slides">
+
+        <!-- Slide 1: Title -->
+        <section class="centered">
+            <h1>PARA-Programming</h1>
+            <p class="subtitle">Structured AI-Assisted Development</p>
+        </section>
+
+        <!-- Slide 2: The Problem -->
+        <section>
+            <h2>The Problem</h2>
+            <p class="text-large mb-1">AI coding assistants are powerful, but...</p>
+            <ul class="text-medium">
+                <li>No memory across sessions</li>
+                <li>No audit trail of decisions</li>
+                <li>Token costs add up fast</li>
+                <li>Work disappears when you close the session</li>
+            </ul>
+        </section>
+
+        <!-- Slide 3: What if... -->
+        <section>
+            <h2>What if your AI assistant had...</h2>
+            <p class="text-xlarge my-1">
+                <strong>Persistent Memory</strong><br>
+                <strong>Complete History</strong><br>
+                <strong>Professional Workflow</strong>
+            </p>
+        </section>
+
+        <!-- Slide 4: Introducing PARA -->
+        <section>
+            <h1>PARA-Programming</h1>
+            <p class="text-xlarge mt-1">
+                A <strong>structured methodology</strong> for<br>
+                professional AI-assisted development
+            </p>
+        </section>
+
+        <!-- Slide 5: The Workflow -->
+        <section>
+            <h2>Five-Step Workflow</h2>
+            <div class="workflow">
+                Plan <span class="arrow">→</span> Review <span class="arrow">→</span> Execute <span class="arrow">→</span> Summarize <span class="arrow">→</span> Archive
+            </div>
+            <p class="text-medium mt-2">
+                Every task follows the same process.<br>
+                <span class="highlight">Consistent. Auditable. Repeatable.</span>
+            </p>
+        </section>
+
+        <!-- Slide 6: How It Works -->
+        <section>
+            <h2>How It Works</h2>
+            <div class="grid text-medium">
+                <div></div>
+                <div>
+                    <p><strong>Plan:</strong> Document approach</p>
+                    <p><strong>Review:</strong> Human approval</p>
+
+                    <p >
+                        <strong>Execute:</strong> Work in git branches, commit after every todo
+                    </p>
+
+                    <p><strong>Summary:</strong> What changed & why</p>
+                    <p><strong>Archive:</strong> Preserve history</p>
+                </div>
+                <div></div>
+            </div>
+
+        </section>
+
+        <!-- Slide 7: Benefit - Auditability -->
+        <section>
+            <h2>Complete Audit Trail</h2>
+            <p class="text-large my-1">
+                Every decision documented.<br>
+                Every change traceable.<br>
+                <span class="highlight">Six months later, you know exactly why.</span>
+            </p>
+            <div class="mt-2 text-medium">
+                <p><strong>Plan:</strong> "Why are we doing this?"</p>
+                <p><strong>Commits:</strong> "What changed, step by step?"</p>
+                <p><strong>Summary:</strong> "What did we learn?"</p>
+            </div>
+        </section>
+
+        <!-- Slide 8: Benefit - Persistence -->
+        <section>
+            <h2>Persistent Context</h2>
+            <p class="text-xlarge my-1">
+                <strong>Resume work across sessions</strong>
+            </p>
+            <p class="text-large-medium lh-relaxed">
+                Friday 5pm: Close laptop<br>
+                Monday 9am: Pick up <strong>exactly</strong> where you left off
+            </p>
+            <p class="text-medium mt-2">
+                Context lives in files, not just memory.
+            </p>
+        </section>
+
+        <!-- Slide 9: Benefit - Efficiency -->
+        <section>
+            <h2>Token Efficiency</h2>
+            <p class="text-large my-1">
+                Load only the context you need<br>
+                <span class="highlight">Use fewer tokens by design</span>
+            </p>
+            <div class="mt-2 text-medium lh-relaxed">
+                <p>Plan-scoped context vs. entire codebase</p>
+                <p>Reference files on-demand, not upfront</p>
+                <p class="mt-1">Result: Lower costs, faster responses</p>
+            </div>
+        </section>
+
+        <!-- Slide 10: Simple Example -->
+        <section>
+            <h2>Example: Add Authentication</h2>
+            <div class="text-small lh-normal">
+                <p><strong>1. Plan:</strong> <code>/para-program:plan "add authentication"</code></p>
+                <p class="ml-2">→ Creates structured plan document</p>
+
+                <p class="mt-0-8"><strong>2. Review:</strong> Human validates approach</p>
+
+                <p class="mt-0-8"><strong>3. Execute:</strong> <code>/para-program:execute</code></p>
+                <p class="ml-2">→ Creates branch, tracks todos, commits incrementally</p>
+
+                <p class="mt-0-8"><strong>4. Summarize:</strong> <code>/para-program:summarize</code></p>
+                <p class="ml-2">→ Documents what changed and why</p>
+            </div>
+        </section>
+
+        <!-- Slide 11: The Context Directory -->
+        <section>
+            <h2>Persistent Memory Layer</h2>
+            <pre class="text-left"><code>context/
+  ├── plans/           # What you're planning to do
+  ├── summaries/       # What you did and why
+  ├── archives/        # Historical snapshots
+  └── context.md       # Active work state
+</code></pre>
+            <p class="text-large-medium mt-1-5">
+                Files survive session boundaries.<br>
+                <span class="highlight">Your work persists.</span>
+            </p>
+        </section>
+
+        <!-- Slide 12: Getting Started -->
+        <section>
+            <h2>Get Started in 5 Minutes</h2>
+            <pre>
+                    <code># Install the plugin
+/plugin install para-program@brian-lai/para-programming-plugin
+
+# Initialize in your project
+/para-program:init
+
+# Start your first task
+/para-program:plan "your task here"
+                    </code>
+                </pre>
+            <p class="text-large-medium mt-1-5">
+                Works with Claude Code, Cursor, Copilot, and more.
+            </p>
+        </section>
+
+        <!-- Slide 13: Why PARA Works -->
+        <section>
+            <h2>Why This Works</h2>
+            <p class="text-xlarge my-1">
+                AI needs <strong>structure</strong>, not just prompts.
+            </p>
+            <p class="text-large-medium lh-relaxed">
+                PARA combines proven methodologies:<br>
+                <span class="highlight">PARA Method</span> + <span class="highlight">Pair Programming</span> + <span class="highlight">Second Brain</span>
+            </p>
+        </section>
+
+        <!-- Slide 14: Call to Action -->
+        <section>
+            <h1>Build Professional Software<br>with AI</h1>
+            <p class="text-large my-1-5">
+                <strong>github.com/brian-lai/para-programming-plugin</strong>
+            </p>
+            <p class="text-medium text-gray">
+                Questions?
+            </p>
+        </section>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.0/dist/reveal.js"></script>
+<script>
+    Reveal.initialize({
+        hash: true,
+        slideNumber: 'c/t',
+        transition: 'slide',
+        backgroundTransition: 'fade',
+        width: 960,
+        height: 700,
+        margin: 0.15,
+        minScale: 0.3,
+        maxScale: 2.0,
+        center: true,
+        controlsLayout: 'bottom-right',
+        progress: true,
+        history: true,
+        keyboard: true,
+        overview: true,
+        touch: true,
+        respondToHashChanges: true
+    });
+</script>
+</body>
+</html>
