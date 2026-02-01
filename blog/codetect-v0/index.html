@@ -68,7 +68,9 @@
 
                 <p>But here's the catch: Cursor's indexing is proprietary and cloud-based. If you want that capability with other tools—Claude Code, Continue, custom LLM workflows—you're out of luck.</p>
 
-                <p>That's when I decided to build <strong>codetect</strong>.</p>
+                <p>That's when I decided to build it myself.</p>
+
+                <p><em>(I originally called it <strong>repo-search</strong>—a literal, functional name. By v1, I'd rename it to <strong>codetect</strong> to better reflect its purpose: detecting code patterns through multiple search modes. But that's getting ahead of the story.)</em></p>
 
                 <hr>
 
@@ -214,7 +216,7 @@
 
                 <h2>What's Next</h2>
 
-                <p>v0 proved the concept. But it also revealed the path forward:</p>
+                <p>v0 (still called <code>repo-search</code> at this point) proved the concept. But it also revealed the path forward:</p>
 
                 <ul>
                     <li><strong>Scale to larger codebases</strong> - PostgreSQL + pgvector for production performance</li>
@@ -222,11 +224,12 @@
                     <li><strong>Multi-repo support</strong> - Centralized database for organizations</li>
                     <li><strong>Incremental indexing</strong> - Don't re-index everything on every change</li>
                     <li><strong>Eval framework</strong> - Measure quality improvements objectively</li>
+                    <li><strong>Better name</strong> - "repo-search" was too generic; the tool deserved a name that reflected its multi-modal search capabilities</li>
                 </ul>
 
                 <p>But the biggest question: <em>Can we fix chunking?</em></p>
 
-                <p>That's the story of v1.</p>
+                <p>That's the story of v1—where <code>repo-search</code> became <code>codetect</code>.</p>
 
                 <hr>
 
