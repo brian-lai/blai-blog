@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>codetect v1: When Better Models Aren't Enough | Brian H.C. Lai</title>
+    <meta name="description" content="How I added PostgreSQL, HNSW indexing, and better embedding models to codetect—and learned that chunking strategy matters more than model quality.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../styles.css">
+    <link rel="stylesheet" href="../blog.css">
+</head>
+<body>
+    <div class="noise"></div>
+
+    <header>
+        <nav>
+            <a href="/" class="logo">brian<span class="accent">.lai</span></a>
+            <div class="nav-links">
+                <a href="/">home</a>
+                <a href="/blog/" class="active">blog</a>
+                <a href="/assets/resume.pdf" target="_blank" rel="noopener">resume</a>
+                <a href="https://github.com/brian-lai" target="_blank" rel="noopener">github</a>
+                <a href="https://linkedin.com/brianhclai" target="_blank" rel="noopener">linkedin</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="blog-main">
+        <a href="/blog/" class="back-link">← Back to Blog</a>
+
+        <article>
+            <div class="article-header">
+                <h1>codetect v1: When Better Models Aren't Enough</h1>
+                <p class="article-subtitle">Scaling challenges and the chunking revelation</p>
+                <div class="article-meta">
+                    <time datetime="2026-01-06">January 6, 2026</time>
+                    <span class="post-tag">llm-tooling</span>
+                    <span class="post-tag">scaling</span>
+                    <span class="reading-time">7 min read</span>
+                </div>
+            </div>
+
+            <div class="article-content">
+
+                <div style="background: rgba(66, 175, 250, 0.1); border-left: 4px solid #42affa; padding: 1.5rem; margin: 2rem 0; border-radius: 4px;">
+                    <p style="margin: 0 0 0.5rem 0; font-weight: 600;">This is part 2 of the codetect series:</p>
+                    <ul style="margin: 0; padding-left: 1.5rem;">
+                        <li><a href="/blog/codetect-v0/" style="color: #42affa;">Part 1: Building an MCP Code Search Tool (v0)</a></li>
+                        <li><strong>Part 2: When Better Models Aren't Enough (v1)</strong> ← You are here</li>
+                        <li><a href="/blog/codetect-v2-release/" style="color: #42affa;">Part 3: From Line Chunks to AST-Based Understanding (v2)</a></li>
+                    </ul>
+                </div>
+
+                <h2>The Scaling Wall</h2>
+
+                <p>After shipping <a href="/blog/codetect-v0/">codetect v0</a> in November, I started using it daily on real projects. Small codebases (~500 files) worked great. But try it on a larger codebase—5,000+ files—and cracks appeared:</p>
+
+                <ul>
+                    <li><strong>Search was slow.</strong> Scanning 10,000+ embeddings in SQLite meant 200-500ms queries. Not terrible, but noticeably laggy.</li>
+                    <li><strong>Indexing was slow.</strong> Embedding 5,000 files took 7+ minutes. Every code change meant waiting.</li>
+                    <li><strong>Semantic search quality was... fine?</strong> Sometimes great, often mediocre. Hard to tell if it was helping or hurting.</li>
+                </ul>
+
+                <p>The obvious answer: <em>better infrastructure, better models.</em></p>
+
+                <p>So that's what I built for v1.</p>
+
+                <hr>
+
+                <h2>What We Added in v1</h2>
+
+                <h3>1. PostgreSQL + pgvector + HNSW</h3>
+
+                <p>SQLite is fantastic for small-scale vector search, but it doesn't have specialized indexing for high-dimensional vectors. PostgreSQL with pgvector does.</p>
+
+                <p><strong>The upgrade:</strong></p>
+                <ul>
+                    <li>Replaced SQLite with PostgreSQL + pgvector extension</li>
+                    <li>Added HNSW (Hierarchical Navigable Small World) indexing</li>
+                    <li>Result: <strong>60x faster search</strong> on 10K+ vectors (500ms → 8ms)</li>
+                </ul>
+
+                <p>HNSW is an approximate nearest neighbor algorithm that trades a tiny bit of accuracy for massive speed gains. For code search, "99% accurate in 8ms" beats "100% accurate in 500ms" every time.</p>
+
+                <h3>2. Better Embedding Models</h3>
+
+                <p>v0 used nomic-embed-text (768 dimensions). Good for an MVP, but newer models promised better semantic understanding:</p>
+
+                <ul>
+                    <li><strong>bge-m3:</strong> 1024 dimensions, optimized for retrieval tasks</li>
+                    <li><strong>mxbai-embed-large:</strong> 1024 dimensions, strong performance on code</li>
+                </ul>
+
+                <p>I added support for multiple models and dimension sizes, letting users choose based on their hardware and accuracy needs.</p>
+
+                <h3>3. Multi-Repo Database Architecture</h3>
+
+                <p>v0 was single-repo: one database per project. For individuals, fine. For teams? Pain.</p>
+
+                <p>v1 introduced a centralized database schema:</p>
+                <ul>
+                    <li>Multiple repos in one database</li>
+                    <li>Repo-scoped search queries</li>
+                    <li>Shared infrastructure (PostgreSQL server for the whole team)</li>
+                </ul>
+
+                <p>This meant <em>one</em> codetect server could index dozens of repos and serve searches across all of them.</p>
+
+                <h3>4. Eval Framework</h3>
+
+                <p>This was the most important addition, even if it wasn't user-facing.</p>
+
+                <p>I built a small eval framework:</p>
+                <ul>
+                    <li>1,000 test queries across 10 open-source repos</li>
+                    <li>Ground truth: manually verified "correct" results for each query</li>
+                    <li>Metrics: retrieval accuracy, context completeness, function completeness</li>
+                </ul>
+
+                <p>Now I could <em>measure</em> whether changes actually improved search quality. No more guessing.</p>
+
+                <hr>
+
+                <h2>Performance Wins</h2>
+
+                <p>The infrastructure upgrades delivered:</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>v0 (SQLite)</th>
+                            <th>v1 (PostgreSQL + HNSW)</th>
+                            <th>Improvement</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Search time (1K vectors)</td>
+                            <td>50ms</td>
+                            <td>5ms</td>
+                            <td>10x faster</td>
+                        </tr>
+                        <tr>
+                            <td>Search time (10K vectors)</td>
+                            <td>500ms</td>
+                            <td>8ms</td>
+                            <td><strong>60x faster</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Multi-repo support</td>
+                            <td>❌</td>
+                            <td>✅</td>
+                            <td>—</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p>Great! We'd solved the performance problem. Time to celebrate, right?</p>
+
+                <hr>
+
+                <h2>The Surprise: Better Models Didn't Help</h2>
+
+                <p>Here's what I expected:</p>
+
+                <blockquote>
+                    <p>"bge-m3 is a better model than nomic-embed-text, so semantic search quality should improve significantly."</p>
+                </blockquote>
+
+                <p>Here's what the eval framework showed:</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>v0 (nomic-embed-text)</th>
+                            <th>v1 (bge-m3)</th>
+                            <th>Change</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Retrieval accuracy</td>
+                            <td>60%</td>
+                            <td>65%</td>
+                            <td>+5%</td>
+                        </tr>
+                        <tr>
+                            <td>Function completeness</td>
+                            <td>40%</td>
+                            <td>40%</td>
+                            <td>No change</td>
+                        </tr>
+                        <tr>
+                            <td>Context preservation</td>
+                            <td>Poor</td>
+                            <td>Poor</td>
+                            <td>No change</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p>5% improvement in retrieval accuracy. But function completeness—whether search results included full functions instead of fragments—<em>didn't change at all.</em></p>
+
+                <p>Why?</p>
+
+                <hr>
+
+                <h2>The Revelation: Chunking Was the Bottleneck</h2>
+
+                <p>Digging into the eval results, a pattern emerged:</p>
+
+                <p><strong>~40% of search results were incomplete functions.</strong></p>
+
+                <p>Example:</p>
+
+                <pre><code class="language-javascript">// Query: "find authentication middleware"
+// Retrieved chunk (lines 463-975):
+
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+    // ... rest of function body
+  }
+}</code></pre>
+
+                <p>This chunk is mid-function. No function signature. No context about what this code does. Just a body.</p>
+
+                <p>Why? <strong>Because line-based chunking doesn't respect function boundaries.</strong></p>
+
+                <p>The function started at line 430. The chunk started at line 463. The embedding captured <em>part</em> of the function, but not the semantically meaningful part (the signature, parameters, return type).</p>
+
+                <p>And no amount of model sophistication could fix this. A better embedding model can't magically reconstruct context that was lost during chunking.</p>
+
+                <hr>
+
+                <h2>The Insight: We Were Treating Code Like Text</h2>
+
+                <p>The problem wasn't the model. It was our assumptions.</p>
+
+                <p><strong>Text documents</strong> (like articles or books) are mostly linear. Splitting by lines or paragraphs is reasonable. Context flows naturally.</p>
+
+                <p><strong>Code is hierarchical.</strong> Functions, classes, modules. Splitting by lines ignores this structure.</p>
+
+                <p>Example: a 600-line file with 15 functions. Line-based chunking (512 lines per chunk) might produce:</p>
+
+                <ul>
+                    <li><strong>Chunk 1:</strong> Functions 1-10 (complete)</li>
+                    <li><strong>Chunk 2:</strong> Functions 11-15, but function 11 starts in chunk 1 (split)</li>
+                </ul>
+
+                <p>Now when you search for function 11, you get incomplete results. The signature is in chunk 1, the body is in chunk 2.</p>
+
+                <p>The realization: <strong>We needed to chunk by semantic units (functions, classes) instead of lines.</strong></p>
+
+                <hr>
+
+                <h2>What We Learned from v1</h2>
+
+                <ol>
+                    <li><strong>Measure what matters.</strong> Without the eval framework, I would've assumed better models = better results. The data revealed the real problem.</li>
+                    <li><strong>Better models ≠ better results if input quality is bad.</strong> Garbage in, garbage out—even with state-of-the-art embeddings.</li>
+                    <li><strong>Scale and quality are different problems.</strong> PostgreSQL + HNSW solved the performance problem. But it didn't solve the quality problem.</li>
+                    <li><strong>Structure matters more than sophistication.</strong> Respecting code structure (functions, classes) is more important than using the fanciest model.</li>
+                </ol>
+
+                <hr>
+
+                <h2>Setting the Stage for v2</h2>
+
+                <p>By early January, the path forward was clear:</p>
+
+                <p><strong>We needed AST-based chunking.</strong></p>
+
+                <p>Instead of splitting code by lines, we needed to:</p>
+                <ol>
+                    <li>Parse code into an Abstract Syntax Tree (AST)</li>
+                    <li>Traverse the AST to identify semantic units (functions, classes, methods)</li>
+                    <li>Chunk by these semantic units instead of lines</li>
+                    <li>Embed complete functions, not arbitrary line ranges</li>
+                </ol>
+
+                <p>This would ensure:</p>
+                <ul>
+                    <li>Search results are complete (full function signatures + bodies)</li>
+                    <li>Embeddings capture semantic meaning (what a function does, not random fragments)</li>
+                    <li>Context is preserved (no mid-function splits)</li>
+                </ul>
+
+                <p>The tools existed: <strong>tree-sitter</strong>, a parser generator used by GitHub, Neovim, and others. Fast, incremental, supports 10+ languages.</p>
+
+                <p>The question: <em>How much would this improve quality?</em></p>
+
+                <p>That's the story of v2.</p>
+
+                <hr>
+
+                <h2>Try codetect v1</h2>
+
+                <p>codetect v1 is available on GitHub:</p>
+
+                <ul>
+                    <li><a href="https://github.com/brian-lai/codetect" target="_blank" rel="noopener">GitHub: brian-lai/codetect</a></li>
+                    <li><a href="https://github.com/brian-lai/codetect/releases/tag/v1.13.0" target="_blank" rel="noopener">v1.13.0 Release</a></li>
+                </ul>
+
+                <p>If you want PostgreSQL-backed semantic search with multi-repo support, v1 is production-ready.</p>
+
+                <p>But if you want <em>actually good</em> code search that understands structure...</p>
+
+                <p><strong>Next:</strong> <a href="/blog/codetect-v2-release/">Part 3 - From Line Chunks to AST-Based Understanding (v2)</a></p>
+
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>New York, NY</p>
+            <div class="footer-links">
+                <a href="https://github.com/brian-lai" target="_blank" rel="noopener">GitHub</a>
+                <a href="https://medium.com/@brianhclai" target="_blank" rel="noopener">Medium</a>
+            </div>
+            <p class="copyright">© 2026 Brian H.C. Lai</p>
+        </div>
+    </footer>
+</body>
+</html>
