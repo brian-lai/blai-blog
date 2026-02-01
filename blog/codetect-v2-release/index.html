@@ -44,6 +44,15 @@
 
             <div class="article-content">
 
+                <div style="background: rgba(66, 175, 250, 0.1); border-left: 4px solid #42affa; padding: 1.5rem; margin: 2rem 0; border-radius: 4px;">
+                    <p style="margin: 0 0 0.5rem 0; font-weight: 600;">This is part 3 of the codetect series:</p>
+                    <ul style="margin: 0; padding-left: 1.5rem;">
+                        <li><a href="/blog/codetect-v0/" style="color: #42affa;">Part 1: Building an MCP Code Search Tool (v0)</a></li>
+                        <li><a href="/blog/codetect-v1/" style="color: #42affa;">Part 2: When Better Models Aren't Enough (v1)</a></li>
+                        <li><strong>Part 3: From Line Chunks to AST-Based Understanding (v2)</strong> ← You are here</li>
+                    </ul>
+                </div>
+
                 <h2>The Problem with Naive Chunking</h2>
 
                 <p>Picture this: you're searching for authentication logic in your codebase. Your semantic search returns a chunk that starts mid-function, cutting off the function signature and half the context. The embedding captured <em>some</em> relevant keywords, but the chunk boundary destroyed the very structure that makes code comprehensible.</p>
@@ -80,68 +89,23 @@ Chunk 2 (lines 463-975, 50-line overlap):
 
                 <hr>
 
-                <h2>Origin Story: Why codetect Exists</h2>
+                <h2>Quick Context: The Journey to v2</h2>
 
-                <p>codetect was born from frustration. As I went deeper into agentic AI-assisted development, I noticed two things:</p>
+                <p>codetect started in November 2025 when I noticed my Claude API costs climbing and coworkers saying Cursor felt faster than Claude Code. The key difference? Codebase indexing.</p>
 
-                <ol>
-                    <li><strong>My token costs were going through the roof.</strong> Feeding entire files to Claude for every question wasn't sustainable.</li>
-                    <li><strong>Performance gaps were real.</strong> Coworkers kept saying Claude felt slow compared to Cursor. The difference? <em>Codebase indexing.</em></li>
-                </ol>
+                <p>So I built an MCP-native code search tool that works with any LLM supporting the Model Context Protocol—not just one vendor. Local-first, no token costs, open source.</p>
 
-                <p>So I built codetect: a local-first MCP server that brings Cursor-grade code search to <strong>any LLM that supports the Model Context Protocol</strong>—not just Claude Code.</p>
-
-                <p><strong>Key features:</strong></p>
-                <ul>
-                    <li><strong>Keyword search</strong> (ripgrep) - Fast full-text search across your codebase</li>
-                    <li><strong>Symbol navigation</strong> (ctags) - Jump to function/class definitions instantly</li>
-                    <li><strong>Semantic search</strong> (local embeddings via Ollama) - Find code by meaning, not just keywords</li>
-                </ul>
-
-                <p><strong>What makes it different:</strong></p>
-                <ul>
-                    <li><strong>MCP-native:</strong> Works with any LLM tool supporting Model Context Protocol (Claude Code, Continue, etc.)</li>
-                    <li><strong>Local-first:</strong> All indexing and search runs on your machine—no cloud dependencies, no token costs</li>
-                    <li><strong>Flexible:</strong> Optional litellm adapter for cloud LLMs, optional PostgreSQL for team sharing</li>
-                    <li><strong>Open source:</strong> MIT license, built for developers by developers</li>
-                </ul>
+                <p><em>(For the full origin story, see <a href="/blog/codetect-v0/">Part 1: Building an MCP Code Search Tool</a>)</em></p>
 
                 <hr>
 
                 <h2>The Evolution: v0 → v1 → v2</h2>
 
-                <h3>v0: The MVP (November 2025)</h3>
+                <p><strong><a href="/blog/codetect-v0/">v0 (November 2025):</a></strong> MVP with line-based chunking (512 lines, 50-line overlap). Simple, shipped fast, validated the MCP-native approach. But functions got split awkwardly across chunks.</p>
 
-                <p><strong>Philosophy:</strong> Get something working quickly.</p>
+                <p><strong><a href="/blog/codetect-v1/">v1 (January 2026):</a></strong> Added PostgreSQL + pgvector (60x faster search), better embedding models (bge-m3), multi-repo support, and an eval framework. The surprise? Better models barely improved quality. The eval revealed: <strong>~40% of search results were incomplete functions</strong> because line-based chunking doesn't respect code structure.</p>
 
-                <p>I started with the simplest approach that could work:</p>
-                <ul>
-                    <li><strong>Symbol indexing:</strong> ctags for function signatures and definitions</li>
-                    <li><strong>Chunking strategy:</strong> Arbitrary line-based splitting (512 lines with 50-line overlap)</li>
-                    <li><strong>Embeddings:</strong> nomic-embed-text (768 dimensions) via Ollama</li>
-                    <li><strong>Database:</strong> SQLite for simplicity</li>
-                </ul>
-
-                <p><strong>Result:</strong> It worked! But chunking was naive and often split functions awkwardly.</p>
-
-                <p><strong>Key insight:</strong> Code has structure that line-based chunking ignores.</p>
-
-                <h3>v1: Scaling Up (January 2026)</h3>
-
-                <p><strong>Philosophy:</strong> Handle larger codebases and better models.</p>
-
-                <p>After the holidays, I focused on performance and scale:</p>
-                <ul>
-                    <li><strong>More powerful models:</strong> Added support for bge-m3 (1024 dimensions) and other embeddings</li>
-                    <li><strong>PostgreSQL + pgvector:</strong> For production scale and HNSW indexing (60x faster search)</li>
-                    <li><strong>Multi-repo support:</strong> Early attempts at centralized databases</li>
-                </ul>
-
-                <p><strong>Result:</strong> Better performance, but chunking was still the bottleneck.</p>
-
-                <p><strong>Key insight:</strong> Better models don't fix bad chunks—we needed semantic boundaries.</p>
-
-                <p>The problem persisted: functions split across chunks, context lost at boundaries, poor retrieval quality despite better models.</p>
+                <p><strong>Key insight from v1:</strong> Better models don't fix bad chunks. We needed to chunk by semantic units (functions, classes) instead of arbitrary lines.</p>
 
                 <h3>v2: AST-Based Intelligence (February 2026)</h3>
 
