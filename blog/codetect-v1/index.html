@@ -84,7 +84,7 @@
 
                 <p>HNSW is an approximate nearest neighbor algorithm that trades a tiny bit of accuracy for massive speed gains. For code search, "99% accurate in 8ms" beats "100% accurate in 500ms" every time.</p>
 
-                <h3>2. Better Embedding Models</h3>
+                <h3>2. Better Embedding Models (and a Performance Surprise)</h3>
 
                 <p>v0 used nomic-embed-text (768 dimensions). Good for an MVP, but newer models promised better semantic understanding:</p>
 
@@ -94,6 +94,16 @@
                 </ul>
 
                 <p>I added support for multiple models and dimension sizes, letting users choose based on their hardware and accuracy needs.</p>
+
+                <p><strong>But there was a catch.</strong></p>
+
+                <p>Better models meant slower embedding. Much slower. With nomic-embed-text, embedding a medium-sized codebase (~1,000 files) took 2-3 minutes. With bge-m3? <strong>Nearly 30 minutes.</strong></p>
+
+                <p>The model was more accurate, but 10x slower for local embedding. For developers running codetect on their laptops, this was a dealbreaker.</p>
+
+                <p><strong>The solution:</strong> Keep both options. Users with access to cloud servers or beefy hardware could use bge-m3 for better quality. Everyone else could stick with nomic-embed-text for speed. (Later, in v2, parallel embedding would solve this—but we're getting ahead of ourselves.)</p>
+
+                <p>This was my first hint that "better models" came with real tradeoffs. Quality vs. speed. Cloud vs. local. The best model isn't always the right choice.</p>
 
                 <h3>3. Multi-Repo Database Architecture</h3>
 
@@ -272,6 +282,7 @@
                 <ol>
                     <li><strong>Measure what matters.</strong> Without the eval framework, I would've assumed better models = better results. The data revealed the real problem.</li>
                     <li><strong>Better models ≠ better results if input quality is bad.</strong> Garbage in, garbage out—even with state-of-the-art embeddings.</li>
+                    <li><strong>Better models come with tradeoffs.</strong> bge-m3 was 10x slower than nomic-embed-text. Quality vs. speed. The "best" model depends on your constraints (local vs. cloud, time vs. accuracy).</li>
                     <li><strong>Scale and quality are different problems.</strong> PostgreSQL + HNSW solved the performance problem. But it didn't solve the quality problem.</li>
                     <li><strong>Structure matters more than sophistication.</strong> Respecting code structure (functions, classes) is more important than using the fanciest model.</li>
                 </ol>
@@ -301,7 +312,9 @@
 
                 <p>The tools existed: <strong>tree-sitter</strong>, a parser generator used by GitHub, Neovim, and others. Fast, incremental, supports 10+ languages.</p>
 
-                <p>The question: <em>How much would this improve quality?</em></p>
+                <p>And while we were at it? We'd solve the embedding performance problem too. Parallel embedding with configurable workers would make even bge-m3 usable for local development.</p>
+
+                <p>The questions for v2: <em>How much would AST-based chunking improve quality? And could we make better models fast enough for local use?</em></p>
 
                 <p>That's the story of v2.</p>
 
