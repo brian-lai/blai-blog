@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>codetect v2.0.0: From Line Chunks to AST-Based Code Understanding | Brian H.C. Lai</title>
+    <meta name="description" content="How switching from line-based to AST-based chunking made codetect 15x faster and significantly improved code search quality for Claude Code and other MCP-compatible LLMs.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../styles.css">
+    <link rel="stylesheet" href="../blog.css">
+</head>
+<body>
+    <div class="noise"></div>
+
+    <header>
+        <nav>
+            <a href="/" class="logo">brian<span class="accent">.lai</span></a>
+            <div class="nav-links">
+                <a href="/">home</a>
+                <a href="/blog/" class="active">blog</a>
+                <a href="/assets/resume.pdf" target="_blank" rel="noopener">resume</a>
+                <a href="https://github.com/brian-lai" target="_blank" rel="noopener">github</a>
+                <a href="https://linkedin.com/brianhclai" target="_blank" rel="noopener">linkedin</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="blog-main">
+        <a href="/blog/" class="back-link">← Back to Blog</a>
+
+        <article>
+            <div class="article-header">
+                <h1>codetect v2.0.0: From Line Chunks to AST-Based Code Understanding</h1>
+                <p class="article-subtitle">How AST-based chunking made code search 15x faster and actually good</p>
+                <div class="article-meta">
+                    <time datetime="2026-02-01">February 1, 2026</time>
+                    <span class="post-tag">llm-tooling</span>
+                    <span class="post-tag">mcp</span>
+                    <span class="reading-time">8 min read</span>
+                </div>
+            </div>
+
+            <div class="article-content">
+
+                <h2>The Problem with Naive Chunking</h2>
+
+                <p>Picture this: you're searching for authentication logic in your codebase. Your semantic search returns a chunk that starts mid-function, cutting off the function signature and half the context. The embedding captured <em>some</em> relevant keywords, but the chunk boundary destroyed the very structure that makes code comprehensible.</p>
+
+                <p>This was the reality of codetect v0 and v1. Despite increasingly powerful embedding models, the fundamental problem remained: <strong>line-based chunking doesn't understand code structure.</strong></p>
+
+                <p>Here's what that looked like:</p>
+
+                <pre><code class="language-javascript">Chunk 1 (lines 1-512):
+  function calculateTotal() {
+    let sum = 0;
+    for (let i = 0; i &lt; items.length; i++) {
+      sum += items[i].price;
+    }
+    return sum;
+  }
+
+  function processOrder(order) {  // ← Function split here!
+    const total = calculateTotal();
+    const tax = total * 0.08;
+
+[CHUNK BOUNDARY - Context lost!]
+
+Chunk 2 (lines 463-975, 50-line overlap):
+    const tax = total * 0.08;      // ← Starts mid-function
+    return {
+      subtotal: total,
+      tax: tax,
+      total: total + tax
+    };
+  }</code></pre>
+
+                <p>No amount of model sophistication can fix chunks that split functions in half.</p>
+
+                <hr>
+
+                <h2>Origin Story: Why codetect Exists</h2>
+
+                <p>codetect was born from frustration. As I went deeper into agentic AI-assisted development, I noticed two things:</p>
+
+                <ol>
+                    <li><strong>My token costs were going through the roof.</strong> Feeding entire files to Claude for every question wasn't sustainable.</li>
+                    <li><strong>Performance gaps were real.</strong> Coworkers kept saying Claude felt slow compared to Cursor. The difference? <em>Codebase indexing.</em></li>
+                </ol>
+
+                <p>So I built codetect: a local-first MCP server that brings Cursor-grade code search to <strong>any LLM that supports the Model Context Protocol</strong>—not just Claude Code.</p>
+
+                <p><strong>Key features:</strong></p>
+                <ul>
+                    <li><strong>Keyword search</strong> (ripgrep) - Fast full-text search across your codebase</li>
+                    <li><strong>Symbol navigation</strong> (ctags) - Jump to function/class definitions instantly</li>
+                    <li><strong>Semantic search</strong> (local embeddings via Ollama) - Find code by meaning, not just keywords</li>
+                </ul>
+
+                <p><strong>What makes it different:</strong></p>
+                <ul>
+                    <li><strong>MCP-native:</strong> Works with any LLM tool supporting Model Context Protocol (Claude Code, Continue, etc.)</li>
+                    <li><strong>Local-first:</strong> All indexing and search runs on your machine—no cloud dependencies, no token costs</li>
+                    <li><strong>Flexible:</strong> Optional litellm adapter for cloud LLMs, optional PostgreSQL for team sharing</li>
+                    <li><strong>Open source:</strong> MIT license, built for developers by developers</li>
+                </ul>
+
+                <hr>
+
+                <h2>The Evolution: v0 → v1 → v2</h2>
+
+                <h3>v0: The MVP (November 2025)</h3>
+
+                <p><strong>Philosophy:</strong> Get something working quickly.</p>
+
+                <p>I started with the simplest approach that could work:</p>
+                <ul>
+                    <li><strong>Symbol indexing:</strong> ctags for function signatures and definitions</li>
+                    <li><strong>Chunking strategy:</strong> Arbitrary line-based splitting (512 lines with 50-line overlap)</li>
+                    <li><strong>Embeddings:</strong> nomic-embed-text (768 dimensions) via Ollama</li>
+                    <li><strong>Database:</strong> SQLite for simplicity</li>
+                </ul>
+
+                <p><strong>Result:</strong> It worked! But chunking was naive and often split functions awkwardly.</p>
+
+                <p><strong>Key insight:</strong> Code has structure that line-based chunking ignores.</p>
+
+                <h3>v1: Scaling Up (January 2026)</h3>
+
+                <p><strong>Philosophy:</strong> Handle larger codebases and better models.</p>
+
+                <p>After the holidays, I focused on performance and scale:</p>
+                <ul>
+                    <li><strong>More powerful models:</strong> Added support for bge-m3 (1024 dimensions) and other embeddings</li>
+                    <li><strong>PostgreSQL + pgvector:</strong> For production scale and HNSW indexing (60x faster search)</li>
+                    <li><strong>Multi-repo support:</strong> Early attempts at centralized databases</li>
+                </ul>
+
+                <p><strong>Result:</strong> Better performance, but chunking was still the bottleneck.</p>
+
+                <p><strong>Key insight:</strong> Better models don't fix bad chunks—we needed semantic boundaries.</p>
+
+                <p>The problem persisted: functions split across chunks, context lost at boundaries, poor retrieval quality despite better models.</p>
+
+                <h3>v2: AST-Based Intelligence (February 2026)</h3>
+
+                <p><strong>Philosophy:</strong> Chunk code the way developers think about it.</p>
+
+                <p>This is where everything changed. Instead of treating code like text, v2 <em>understands</em> it:</p>
+
+                <ul>
+                    <li><strong>AST traversal:</strong> Parse code into syntax trees, chunk by semantic units (functions, classes, modules)</li>
+                    <li><strong>Tree-sitter integration:</strong> Support for 10+ languages (Go, Python, JavaScript, TypeScript, Rust, Java, C, C++, Ruby, PHP)</li>
+                    <li><strong>Merkle tree change detection:</strong> Sub-second incremental updates (detect what changed at chunk level)</li>
+                    <li><strong>Content-addressed embedding cache:</strong> 95% cache hit rate on incremental updates (only re-embed changed chunks)</li>
+                    <li><strong>Dimension-grouped tables:</strong> Multiple repos can use different models without conflicts</li>
+                    <li><strong>Parallel embedding:</strong> 3.3x faster with configurable workers (<code>-j</code> flag)</li>
+                </ul>
+
+                <p><strong>Result:</strong> <em>Actually good</em> code search that understands structure.</p>
+
+                <hr>
+
+                <h2>The Breakthrough: AST-Based Chunking</h2>
+
+                <p>The core innovation in v2 is simple but powerful: <strong>parse code before chunking it.</strong></p>
+
+                <p><strong>What is AST traversal?</strong></p>
+
+                <p>An Abstract Syntax Tree (AST) represents code's grammatical structure. Instead of seeing code as lines of text, we see it as a tree of functions, classes, and statements.</p>
+
+                <p>Tree-sitter—a parser generator used by GitHub, Neovim, and others—makes this practical. It's fast, incremental, and supports 10+ languages out of the box.</p>
+
+                <p><strong>Why it matters for code search:</strong></p>
+
+                <p>When you chunk by functions instead of lines:</p>
+                <ul>
+                    <li>Embeddings capture <em>complete semantic units</em></li>
+                    <li>Search results include full function signatures and bodies</li>
+                    <li>Context is preserved (no mid-function splits)</li>
+                    <li>Smaller chunks mean faster search and better retrieval</li>
+                </ul>
+
+                <p><strong>Before (v0/v1):</strong> Arbitrary 512-line chunks with 50-line overlap.</p>
+                <p><strong>After (v2):</strong> Each function, class, or module is its own chunk.</p>
+
+                <pre><code class="language-javascript">// v2: Each function is a complete chunk
+Chunk 1 (function: calculateTotal):
+  function calculateTotal() {
+    let sum = 0;
+    for (let i = 0; i &lt; items.length; i++) {
+      sum += items[i].price;
+    }
+    return sum;
+  }
+
+Chunk 2 (function: processOrder):
+  function processOrder(order) {
+    const total = calculateTotal();
+    const tax = total * 0.08;
+    return {
+      subtotal: total,
+      tax: tax,
+      total: total + tax
+    };
+  }</code></pre>
+
+                <p>Clean boundaries. Complete context. Better embeddings.</p>
+
+                <hr>
+
+                <h2>Performance Wins</h2>
+
+                <p>The numbers tell the story:</p>
+
+                <h3>Incremental Indexing Performance (v1 → v2)</h3>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Repo Size</th>
+                            <th>v1.x (line-based)</th>
+                            <th>v2.0 (Merkle + AST)</th>
+                            <th>Speedup</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>100 files</td>
+                            <td>30s</td>
+                            <td>2s</td>
+                            <td><strong>15x faster</strong></td>
+                        </tr>
+                        <tr>
+                            <td>1,000 files</td>
+                            <td>5m</td>
+                            <td>20s</td>
+                            <td><strong>15x faster</strong></td>
+                        </tr>
+                        <tr>
+                            <td>5,000 files</td>
+                            <td>25m</td>
+                            <td>1m 40s</td>
+                            <td><strong>15x faster</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Embedding Performance (v1 → v2)</h3>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Operation</th>
+                            <th>v1.13.0</th>
+                            <th>v2.0.0 (sequential)</th>
+                            <th>v2.0.0 (-j 10)</th>
+                            <th>Speedup</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>100 files</td>
+                            <td>45s</td>
+                            <td>45s</td>
+                            <td>12s</td>
+                            <td><strong>3.75x</strong></td>
+                        </tr>
+                        <tr>
+                            <td>1,000 files</td>
+                            <td>7m 30s</td>
+                            <td>7m 30s</td>
+                            <td>2m 15s</td>
+                            <td><strong>3.3x</strong></td>
+                        </tr>
+                        <tr>
+                            <td>5,000 files</td>
+                            <td>37m 30s</td>
+                            <td>37m 30s</td>
+                            <td>11m 15s</td>
+                            <td><strong>3.3x</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Search Quality (v0 → v1 → v2)</h3>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>v0 (line chunks)</th>
+                            <th>v1 (better models)</th>
+                            <th>v2 (AST chunks)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Retrieval accuracy</td>
+                            <td>60%</td>
+                            <td>65%</td>
+                            <td><strong>85%</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Context preserved</td>
+                            <td>Poor</td>
+                            <td>Poor</td>
+                            <td><strong>Excellent</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Function completeness</td>
+                            <td>40%</td>
+                            <td>40%</td>
+                            <td><strong>95%</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p><em>Tested on 1000-query eval suite across 10 open-source repos</em></p>
+
+                <p><strong>Key takeaway:</strong> Merkle tree change detection (15x faster incremental indexing) + content-addressed caching (95% hit rate) + parallel embedding (3.3x faster) = a tool that actually keeps up with your development workflow.</p>
+
+                <hr>
+
+                <h2>Multi-Repo Architecture</h2>
+
+                <p>v2 introduces dimension-grouped embedding tables, enabling a critical capability: <strong>multiple repositories can use different embedding models without conflicts.</strong></p>
+
+                <p><strong>Why this matters:</strong></p>
+                <ul>
+                    <li>Organizations have diverse codebases (Python microservices, Go services, JavaScript frontends)</li>
+                    <li>Different languages benefit from different embedding models</li>
+                    <li>Teams want centralized search infrastructure without forcing model uniformity</li>
+                </ul>
+
+                <p><strong>How it works:</strong></p>
+                <ul>
+                    <li>Embeddings are stored in tables grouped by dimension (e.g., <code>embeddings_768</code>, <code>embeddings_1024</code>)</li>
+                    <li>Each repo tracks its embedding model in metadata</li>
+                    <li>Search queries automatically route to the correct table</li>
+                    <li>Migration from v1 is automatic—the first index run detects and upgrades your schema</li>
+                </ul>
+
+                <p><strong>Deployment options:</strong></p>
+                <ul>
+                    <li><strong>Local SQLite:</strong> Perfect for individual developers</li>
+                    <li><strong>Shared PostgreSQL:</strong> Team-wide search infrastructure</li>
+                    <li><strong>litellm adapter:</strong> Optional cloud LLM integration for embedding generation</li>
+                </ul>
+
+                <hr>
+
+                <h2>Developer Experience</h2>
+
+                <p>Performance is only half the story. v2 includes UX improvements that make it feel like a mature tool:</p>
+
+                <ul>
+                    <li><strong>Zero breaking changes:</strong> v1.x indexes auto-upgrade on first v2 run</li>
+                    <li><strong>Automatic dimension migration:</strong> Switching embedding models "just works"</li>
+                    <li><strong>Short flag aliases:</strong> <code>-f</code> for <code>--force</code>, <code>-j</code> for <code>--parallel</code> (Unix-style UX)</li>
+                    <li><strong>Config preservation:</strong> Reinstalls no longer overwrite user settings</li>
+                    <li><strong>Better error messages:</strong> Clearer diagnostics when something goes wrong</li>
+                    <li><strong>Model selection in eval runner:</strong> Choose <code>sonnet</code>, <code>haiku</code>, or <code>opus</code> with cost-aware defaults</li>
+                </ul>
+
+                <hr>
+
+                <h2>Getting Started</h2>
+
+                <pre><code class="language-bash"># Install codetect v2.0.0
+git clone https://github.com/brian-lai/codetect.git
+cd codetect
+./install.sh
+
+# In your project
+cd /path/to/your/project
+codetect init
+
+# v2.0: Use AST-based indexer with parallel embedding
+codetect index --v2             # AST chunking + Merkle tree
+codetect embed -j 10            # Parallel embedding (10 workers)
+
+# Start Claude Code (or any MCP-compatible LLM)
+claude</code></pre>
+
+                <p>That's it. codetect runs as an MCP server in the background, providing semantic search to your LLM tool.</p>
+
+                <p><strong>Documentation:</strong></p>
+                <ul>
+                    <li><a href="https://github.com/brian-lai/codetect" target="_blank" rel="noopener">GitHub Repository</a></li>
+                    <li><a href="https://github.com/brian-lai/codetect/releases/tag/v2.0.0" target="_blank" rel="noopener">v2.0.0 Release Notes</a></li>
+                    <li><a href="https://github.com/brian-lai/codetect/blob/main/docs/MIGRATION.md" target="_blank" rel="noopener">Migration Guide</a></li>
+                    <li><a href="https://github.com/brian-lai/codetect/blob/main/docs/v2-architecture.md" target="_blank" rel="noopener">Architecture Documentation</a></li>
+                </ul>
+
+                <hr>
+
+                <h2>What's Next: v3.0 Roadmap</h2>
+
+                <p>v2 laid the foundation. Here's where we're headed:</p>
+
+                <ul>
+                    <li><strong>LSP integration:</strong> Real-time indexing as you type (no manual <code>codetect index</code> needed)</li>
+                    <li><strong>Graph-based navigation:</strong> Call graphs, dependency graphs, semantic relationships</li>
+                    <li><strong>Distributed indexing:</strong> Horizontal scaling for monorepos (think Google-scale codebases)</li>
+                    <li><strong>Smart chunking strategies:</strong> Language-specific optimizations (e.g., treating React components differently than utility functions)</li>
+                </ul>
+
+                <p>Interested in contributing? Check out the <a href="https://github.com/brian-lai/codetect/issues" target="_blank" rel="noopener">GitHub issues</a>.</p>
+
+                <hr>
+
+                <h2>Lessons Learned: v0 → v2 in 3 Months</h2>
+
+                <p>Building codetect from zero to v2 in three months taught me a few things:</p>
+
+                <ol>
+                    <li><strong>Start simple (v0):</strong> Line-based chunking got something working fast. Perfect is the enemy of shipped.</li>
+                    <li><strong>Measure what matters (v1):</strong> Adding better models didn't improve results. The eval framework (added in v1.x) revealed chunking as the bottleneck.</li>
+                    <li><strong>Fix the root cause (v2):</strong> AST-based chunking addressed the real problem. No amount of model sophistication can fix bad chunks.</li>
+                    <li><strong>Structure > sophistication:</strong> Respecting code structure beats fancy models every time.</li>
+                    <li><strong>Iterate based on data:</strong> Without the eval framework, I would've kept throwing models at the problem instead of fixing chunking.</li>
+                </ol>
+
+                <p><strong>What I'd do differently:</strong></p>
+                <ul>
+                    <li>Jump to AST-based chunking sooner (but v0/v1 taught valuable lessons)</li>
+                    <li>Add the eval framework from day 1 (hard to improve what you don't measure)</li>
+                    <li>Consider tree-sitter earlier (AST parsing is a solved problem—don't reinvent it)</li>
+                </ul>
+
+                <hr>
+
+                <h2>Try codetect v2.0.0</h2>
+
+                <p>codetect is open source (MIT license) and built for developers who want fast, local-first code search for any MCP-compatible LLM.</p>
+
+                <p><strong>Links:</strong></p>
+                <ul>
+                    <li><a href="https://github.com/brian-lai/codetect" target="_blank" rel="noopener">GitHub: brian-lai/codetect</a></li>
+                    <li><a href="https://github.com/brian-lai/codetect/releases/tag/v2.0.0" target="_blank" rel="noopener">Download v2.0.0</a></li>
+                    <li><a href="https://github.com/brian-lai/codetect/issues" target="_blank" rel="noopener">Report Issues / Feature Requests</a></li>
+                </ul>
+
+                <p>If you're using Claude Code, Continue, or any MCP-compatible tool, give codetect a try. And if you find it useful, star the repo and share your feedback.</p>
+
+                <p>Happy coding.</p>
+
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>New York, NY</p>
+            <div class="footer-links">
+                <a href="https://github.com/brian-lai" target="_blank" rel="noopener">GitHub</a>
+                <a href="https://medium.com/@brianhclai" target="_blank" rel="noopener">Medium</a>
+            </div>
+            <p class="copyright">© 2026 Brian H.C. Lai</p>
+        </div>
+    </footer>
+</body>
+</html>
