@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>codetect v0: Building an MCP Code Search Tool from Scratch | Brian H.C. Lai</title>
+    <meta name="description" content="How I built a local-first code search tool for Claude Code and other MCP-compatible LLMs to solve rising token costs and performance gaps.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../styles.css">
+    <link rel="stylesheet" href="../blog.css">
+</head>
+<body>
+    <div class="noise"></div>
+
+    <header>
+        <nav>
+            <a href="/" class="logo">brian<span class="accent">.lai</span></a>
+            <div class="nav-links">
+                <a href="/">home</a>
+                <a href="/blog/" class="active">blog</a>
+                <a href="/assets/resume.pdf" target="_blank" rel="noopener">resume</a>
+                <a href="https://github.com/brian-lai" target="_blank" rel="noopener">github</a>
+                <a href="https://linkedin.com/brianhclai" target="_blank" rel="noopener">linkedin</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="blog-main">
+        <a href="/blog/" class="back-link">← Back to Blog</a>
+
+        <article>
+            <div class="article-header">
+                <h1>codetect v0: Building an MCP Code Search Tool from Scratch</h1>
+                <p class="article-subtitle">The origin story and MVP approach</p>
+                <div class="article-meta">
+                    <time datetime="2025-11-15">November 15, 2025</time>
+                    <span class="post-tag">llm-tooling</span>
+                    <span class="post-tag">mcp</span>
+                    <span class="reading-time">6 min read</span>
+                </div>
+            </div>
+
+            <div class="article-content">
+
+                <div style="background: rgba(66, 175, 250, 0.1); border-left: 4px solid #42affa; padding: 1.5rem; margin: 2rem 0; border-radius: 4px;">
+                    <p style="margin: 0 0 0.5rem 0; font-weight: 600;">This is part 1 of the codetect series:</p>
+                    <ul style="margin: 0; padding-left: 1.5rem;">
+                        <li><strong>Part 1: Building an MCP Code Search Tool (v0)</strong> ← You are here</li>
+                        <li><a href="/blog/codetect-v1/" style="color: #42affa;">Part 2: When Better Models Aren't Enough (v1)</a></li>
+                        <li><a href="/blog/codetect-v2-release/" style="color: #42affa;">Part 3: From Line Chunks to AST-Based Understanding (v2)</a></li>
+                    </ul>
+                </div>
+
+                <h2>The Problem</h2>
+
+                <p>November 2025. I'm deep into agentic AI-assisted development, and I notice two things happening simultaneously:</p>
+
+                <ol>
+                    <li><strong>My Claude API bills are climbing fast.</strong> Every time I ask Claude about my codebase, I'm sending entire files—sometimes multiple files—just to get context. A simple "where is the authentication logic?" question could cost 10-20k tokens.</li>
+                    <li><strong>People keep saying Cursor feels faster than Claude Code.</strong> Coworkers, friends on Twitter, developers in Discord—everyone's making the same observation.</li>
+                </ol>
+
+                <p>So I dig into <em>why</em> Cursor feels different. The answer isn't the underlying model (both can use Claude). It's the <strong>codebase indexing.</strong></p>
+
+                <p>Cursor indexes your codebase and retrieves only relevant chunks when you ask questions. Instead of sending 5,000 lines of code, it sends 500. Instead of 20k tokens, maybe 2k. Same answer, 90% less cost.</p>
+
+                <p>But here's the catch: Cursor's indexing is proprietary and cloud-based. If you want that capability with other tools—Claude Code, Continue, custom LLM workflows—you're out of luck.</p>
+
+                <p>That's when I decided to build <strong>codetect</strong>.</p>
+
+                <hr>
+
+                <h2>The Goal</h2>
+
+                <p>I wanted a tool that:</p>
+
+                <ul>
+                    <li><strong>Works with any LLM that supports MCP</strong> (Model Context Protocol) - not just one vendor</li>
+                    <li><strong>Runs entirely locally</strong> - no cloud dependencies, no API costs, no data leaving your machine</li>
+                    <li><strong>Provides three search modes:</strong>
+                        <ul>
+                            <li>Keyword search (fast full-text)</li>
+                            <li>Symbol navigation (jump to definitions)</li>
+                            <li>Semantic search (find code by meaning, not just keywords)</li>
+                        </ul>
+                    </li>
+                    <li><strong>Is fast enough for real development</strong> - sub-second search on typical codebases</li>
+                    <li><strong>Is open source</strong> - MIT license, community-driven</li>
+                </ul>
+
+                <p>The North Star: <em>Bring Cursor-grade code search to the entire MCP ecosystem.</em></p>
+
+                <hr>
+
+                <h2>The MVP Approach: Ship Fast, Learn Fast</h2>
+
+                <p>I gave myself a constraint: <strong>get something working in weeks, not months.</strong></p>
+
+                <p>Here's what I chose for v0:</p>
+
+                <h3>Technology Stack</h3>
+
+                <ul>
+                    <li><strong>SQLite:</strong> Simple, fast, single-file database. Perfect for MVP.</li>
+                    <li><strong>ripgrep:</strong> Blazing-fast keyword search (already on most dev machines).</li>
+                    <li><strong>ctags:</strong> Battle-tested symbol indexing for function/class definitions.</li>
+                    <li><strong>Ollama + nomic-embed-text:</strong> Local embeddings (768 dimensions) without cloud API costs.</li>
+                </ul>
+
+                <h3>Chunking Strategy</h3>
+
+                <p>This is where I took the simplest possible approach:</p>
+
+                <ul>
+                    <li><strong>Line-based chunking:</strong> Split files every 512 lines</li>
+                    <li><strong>50-line overlap:</strong> Overlap chunks to avoid losing context at boundaries</li>
+                    <li><strong>One chunk = one embedding:</strong> Simple 1:1 mapping</li>
+                </ul>
+
+                <p>I knew this was naive. Functions would get split across chunks. Context would be lost. But it was <em>fast to implement</em> and would validate the core idea.</p>
+
+                <h3>MCP Server Architecture</h3>
+
+                <p>codetect runs as an MCP server that exposes three tools to any compatible LLM:</p>
+
+                <pre><code class="language-typescript">// Three search modes exposed via MCP
+{
+  "keyword_search": {
+    "description": "Fast full-text search using ripgrep",
+    "parameters": { "query": "string" }
+  },
+  "symbol_search": {
+    "description": "Find function/class definitions using ctags",
+    "parameters": { "symbol": "string" }
+  },
+  "semantic_search": {
+    "description": "Find code by meaning using embeddings",
+    "parameters": { "query": "string", "limit": "number" }
+  }
+}</code></pre>
+
+                <p>The LLM decides which tool to use based on the user's query. Want to find "authentication logic"? Semantic search. Want to jump to the <code>validateToken</code> function? Symbol search. Want to grep for "TODO"? Keyword search.</p>
+
+                <hr>
+
+                <h2>Implementation: The First Two Weeks</h2>
+
+                <p><strong>Week 1: Basic indexing</strong></p>
+                <ul>
+                    <li>File traversal (ignore <code>.git</code>, <code>node_modules</code>, etc.)</li>
+                    <li>Line-based chunking</li>
+                    <li>SQLite schema for chunks and embeddings</li>
+                    <li>Integration with Ollama for local embedding generation</li>
+                </ul>
+
+                <p><strong>Week 2: MCP server + search</strong></p>
+                <ul>
+                    <li>MCP server implementation</li>
+                    <li>Vector similarity search (cosine similarity in SQLite)</li>
+                    <li>ripgrep and ctags integration</li>
+                    <li>Basic CLI (<code>codetect init</code>, <code>codetect index</code>, <code>codetect search</code>)</li>
+                </ul>
+
+                <p>By mid-November, I had a working prototype. It wasn't pretty, but it <em>worked</em>.</p>
+
+                <hr>
+
+                <h2>What Worked</h2>
+
+                <p><strong>1. MCP integration was seamless.</strong> The Model Context Protocol made it trivial to expose codetect's capabilities to Claude Code. Once the server was running, Claude could call search functions naturally.</p>
+
+                <p><strong>2. Local embeddings were viable.</strong> Ollama's nomic-embed-text was fast enough (10-50 chunks/second) and accurate enough for code search. No cloud API costs, no rate limits.</p>
+
+                <p><strong>3. Keyword + symbol search were immediately useful.</strong> Even without semantic search, ripgrep and ctags provided 80% of the value. Developers use keyword search constantly.</p>
+
+                <p><strong>4. Shipping fast enabled real feedback.</strong> Within days of launching v0, I was using it daily. That usage revealed what needed to improve.</p>
+
+                <hr>
+
+                <h2>What Didn't Work</h2>
+
+                <p><strong>1. Line-based chunking split functions awkwardly.</strong></p>
+
+                <p>Example: a 600-line file with a function starting at line 480. The function gets split across two chunks—signature in one, body in another. When semantic search retrieves the second chunk, you get a function body with no context.</p>
+
+                <p><strong>2. Semantic search quality was inconsistent.</strong></p>
+
+                <p>Sometimes it was brilliant: "find rate limiting logic" → correct results. Sometimes it was terrible: "find database connection setup" → random chunks mentioning "database" but not the actual connection code.</p>
+
+                <p>Why? Because chunks weren't semantic units. They were arbitrary line ranges.</p>
+
+                <p><strong>3. No incremental updates.</strong></p>
+
+                <p>Every code change meant a full re-index. For small projects (100-500 files), this was fine (30-60 seconds). For larger codebases? Painful.</p>
+
+                <p><strong>4. Single-repo limitation.</strong></p>
+
+                <p>v0 assumed one repo per database. If you worked on multiple projects, you needed multiple databases. Not ideal for organizations.</p>
+
+                <hr>
+
+                <h2>Key Learnings</h2>
+
+                <ol>
+                    <li><strong>Ship fast, learn fast.</strong> v0's line-based chunking was naive, but getting it out quickly validated the core idea and revealed what to fix.</li>
+                    <li><strong>Local embeddings are viable.</strong> You don't need cloud APIs for code search. Local models are fast enough and good enough.</li>
+                    <li><strong>Code has structure.</strong> Line-based chunking ignores that structure. This became the key insight for v1 and v2.</li>
+                    <li><strong>MCP is powerful.</strong> Exposing search as MCP tools made integration trivial. Any MCP-compatible LLM could use codetect without modification.</li>
+                </ol>
+
+                <hr>
+
+                <h2>What's Next</h2>
+
+                <p>v0 proved the concept. But it also revealed the path forward:</p>
+
+                <ul>
+                    <li><strong>Scale to larger codebases</strong> - PostgreSQL + pgvector for production performance</li>
+                    <li><strong>Better embedding models</strong> - Try bge-m3, mxbai-embed-large (higher dimensions)</li>
+                    <li><strong>Multi-repo support</strong> - Centralized database for organizations</li>
+                    <li><strong>Incremental indexing</strong> - Don't re-index everything on every change</li>
+                    <li><strong>Eval framework</strong> - Measure quality improvements objectively</li>
+                </ul>
+
+                <p>But the biggest question: <em>Can we fix chunking?</em></p>
+
+                <p>That's the story of v1.</p>
+
+                <hr>
+
+                <h2>Try codetect v0</h2>
+
+                <p>codetect is open source and available on GitHub:</p>
+
+                <ul>
+                    <li><a href="https://github.com/brian-lai/codetect" target="_blank" rel="noopener">GitHub: brian-lai/codetect</a></li>
+                    <li><a href="https://github.com/brian-lai/codetect/releases/tag/v0.1.0" target="_blank" rel="noopener">v0.1.0 Release</a></li>
+                </ul>
+
+                <p>If you're working with Claude Code or other MCP-compatible tools and want local-first code search, give it a try.</p>
+
+                <p><strong>Next:</strong> <a href="/blog/codetect-v1/">Part 2 - When Better Models Aren't Enough (v1)</a></p>
+
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>New York, NY</p>
+            <div class="footer-links">
+                <a href="https://github.com/brian-lai" target="_blank" rel="noopener">GitHub</a>
+                <a href="https://medium.com/@brianhclai" target="_blank" rel="noopener">Medium</a>
+            </div>
+            <p class="copyright">© 2025 Brian H.C. Lai</p>
+        </div>
+    </footer>
+</body>
+</html>
